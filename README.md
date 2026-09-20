@@ -1,123 +1,85 @@
-# KripaBot Website and CMS
+# KripaBot Website
 
 Official public website and private content manager for KripaBot (Team 1578), Vishwakarma Vidyalaya English Medium School, Pune.
 
-## Architecture
+## Stack
 
-```
-Public Website (GitHub Pages or frontend host)
-             |
-       Existing Admin CMS
-             |
-       Existing Express API
-          /             \
-Google Apps Script       Gemini API
-       |                 (server-side only)
-Google Drive + optional Google Sheet
-       |
-CMS metadata (local JSON during development)
-```
-
-The public website continues to use `/api/public`; it never talks to Google Drive directly. The CMS record is the source of truth. A Google Sheet is only an optional media index.
-
-## Project structure
-
-```
-src/                         Existing React public site and admin UI
-server/index.js              Existing Express API, login, upload/review routes
-server/storage.js            Existing local JSON CMS data store
-server/ai.js                 Provider-neutral Gemini/AI analysis
-server/providers/            Local and Apps Script media providers
-apps-script/Code.gs          Deployable Google Apps Script Drive bridge
-apps-script/README.md        Apps Script setup details
-```
+- React, TypeScript, and Vite for the public site and admin UI
+- Express for the API and authentication
+- JSON file storage for the current lightweight CMS
+- Local filesystem or optional Google Apps Script storage for media
+- JWT admin sessions and optional bcrypt password hashes
 
 ## Local development
 
-1. Install Node.js 20 or later.
-2. Run `npm install`.
-3. Copy `.env.example` to `.env`.
-4. Set `JWT_SECRET`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`.
-5. Keep `STORAGE_PROVIDER=local` and `AI_PROVIDER=none`.
-6. Run `npm run dev`, then open the Vite URL (normally `http://localhost:5173`).
+1. Install Node.js 18 or newer.
+2. Copy `.env.example` to `.env` and set a long random `JWT_SECRET`, `ADMIN_EMAIL`, and `ADMIN_PASSWORD`.
+3. Install dependencies with `npm install`.
+4. Start the Vite client and API with `npm run dev`.
 
-Build with `npm run build`. The API is served on port 3001 by `npm run dev`.
-
-## Admin and approval workflow
-
-Visit `/admin` and sign in using `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Media always follows this flow:
-
-```
-upload -> store -> optional AI suggestions -> admin review/edit -> explicit publish -> public website
-```
-
-AI does not publish content. An AI failure also does not delete an uploaded file: the admin can enter metadata manually. Supported uploads remain JPG, PNG, WebP, GIF, MP4, WebM, and MOV; `MAX_UPLOAD_MB` remains the upload limit.
-
-## Google Drive through Apps Script (no service account)
-
-This project does **not** require a Google Cloud service account, Google Cloud billing, a credit card, service-account JSON, or Drive API credentials.
-
-1. Create a private Drive folder for KripaBot media.
-2. Create a Google Apps Script project at `script.google.com`.
-3. Copy [apps-script/Code.gs](apps-script/Code.gs) into the project.
-4. In **Project Settings -> Script properties**, add:
-   - `KRIPABOT_SECRET`: a long random shared secret
-   - `KRIPABOT_MEDIA_FOLDER_ID`: the Drive folder ID (or `KRIPABOT_DRIVE_FOLDER_ID`)
-   - `KRIPABOT_SHEET_ID`: optional Sheet ID for a `Media` index
-5. Deploy as **Web app**, execute as **Me**, then copy the `/exec` URL.
-6. Add that URL and the same secret to the backend `.env`.
-7. Set `STORAGE_PROVIDER=apps-script` and restart the backend.
-8. Sign in to `/admin`, upload a small image, check it remains unpublished, then publish it and verify it appears in the public gallery.
-
-Apps Script uses `DriveApp`, `SpreadsheetApp`, `Utilities`, `ContentService`, and `PropertiesService`. It validates a shared server-side secret for `upload`, `get`, `delete`, and `list`. Drive files may remain private: the Express API retrieves media only after a published CMS record is requested. Drive file IDs are not sent to the public frontend.
-
-Apps Script transfers complete bytes as Base64 JSON and does not provide video streaming/range requests here. The bridge therefore defaults to 4 MB for media and 2 MB for video. Small images work normally; only very small clips can use Apps Script video storage, and they are not suitable for normal video hosting or reliable seeking. Local storage still follows `MAX_UPLOAD_MB`; do not silently raise it. Use a dedicated streaming/object-storage workflow before routinely accepting large videos. Apps Script and Gemini quotas/free-tier limits can change.
-
-## Gemini setup
-
-Gemini is optional and server-side only:
-
-```env
-AI_PROVIDER=gemini
-GEMINI_API_KEY=your-server-only-key
-GEMINI_MODEL=gemini-2.0-flash
-```
-
-`server/ai.js` validates editable title, description, category, tags, alt text, confidence, and suggested section before saving. It handles unavailable Gemini, timeouts, rate limits, API errors, and malformed responses with safe fallback metadata. Never prefix these values with `VITE_` and never place them in frontend code.
+The client runs on Vite's local port and proxies `/api` and `/uploads` to the Express API on port 3001. The API can also be started separately with `npm run server`.
 
 ## Environment variables
 
-```env
-PORT=3001
-JWT_SECRET=long-random-secret
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=strong-unique-password
-MAX_UPLOAD_MB=20
+See `.env.example`. Secrets belong only in the local `.env` file or the deployment provider's secret settings. For production, prefer `ADMIN_PASSWORD_HASH` with a bcrypt hash and set `STORAGE_PROVIDER` to a durable external provider. Local JSON storage and `server/uploads` are not durable across many hosting platforms.
 
-STORAGE_PROVIDER=local
-# local for development, apps-script for Drive
+## CMS
 
-AI_PROVIDER=none
-# none or gemini
-GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.0-flash
+Open `/admin` after starting the project. The CMS supports authenticated management of media, projects, achievements, team members, links, settings, and categories. Uploaded media stays unpublished until reviewed and published by an administrator.
 
-GOOGLE_APPS_SCRIPT_URL=
-GOOGLE_APPS_SCRIPT_SECRET=
-APPS_SCRIPT_MAX_BRIDGE_MB=4
-APPS_SCRIPT_MAX_VIDEO_MB=2
+The current JSON CMS is intentionally small and suitable for a student project. Writes use atomic file replacement to avoid partial JSON files, but the store is still a single-process read-modify-write system. If multiple administrators or high write volume become requirements, move the data layer to a managed database before scaling the application. Keep `DATA_DIR` and `UPLOAD_DIR` on persistent storage and back them up separately.
+
+## Build and deployment
+
+Run `npm run build` to create the Vite production bundle in `dist`. `npm run preview` serves that bundle locally.
+
+Cloudflare Pages can host the static Vite frontend with:
+
+- Build command: `npm run build`
+- Output directory: `dist`
+
+The `_redirects` file preserves SPA routes such as `/admin` on Pages. The Express API cannot run unchanged on Cloudflare Pages because it uses a long-running Node server, local filesystem storage, and Multer memory uploads. Deploy the API to a Node-compatible host, configure the frontend/API origin as needed, and use durable object storage for production media. A future Workers migration would require replacing Express, local files, and the JSON database with Workers-compatible services.
+
+### Production deployment
+
+Frontend: connect this GitHub repository to Cloudflare Pages with build command `npm run build` and output directory `dist`. Pages serves the Vite frontend only; it does not automatically host this Express API.
+
+Backend: deploy the repository to a Node-compatible host with HTTPS, environment variables, enough memory for the configured upload limit, a suitable request timeout, and reliable process startup. The production start command is `npm run server`, which runs `node server/index.js`.
+
+API: set `VITE_API_BASE_URL` in the Cloudflare Pages build environment to the public HTTPS API origin. Set `FRONTEND_ORIGIN` on the API to the exact frontend origin. `VITE_*` values are public and must never contain secrets.
+
+CMS data: JSON storage is acceptable only when the backend host provides persistent disk and regular backups. Set `DATA_DIR` to that persistent location. It remains single-instance oriented and uses read-modify-write operations, so move to a managed database before adding multiple administrators or scaling horizontally.
+
+Media: use durable object/file storage for production media. Local storage requires a persistent volume and backups. Apps Script remains an optional small-media bridge; its Base64 design is unsuitable for large production videos.
+
+Required environment variable names are listed in `.env.example`; use the host's secret settings and do not commit `.env`.
+
+## Project structure
+
+- `src/main.tsx`: public website and CMS UI
+- `src/styles.css`: shared visual system and responsive styles
+- `server/index.js`: API, authentication, uploads, and SPA serving
+- `server/storage.js`: JSON data store
+- `server/providers/`: media storage providers
+- `public/`: static assets, robots, sitemap, and deployment redirects
+
+## Checks
+
+```bash
+npm install
+npm run build
+node --check server/index.js
 ```
 
-The former service-account configuration is deprecated and is not required or read by the active provider. Put real values only in local `.env` files and hosting-provider secret settings, never Git, GitHub Pages, source files, or browser JavaScript. The Apps Script secret is separate from the CMS password.
+There is currently no dedicated lint script in `package.json`; TypeScript compilation is part of the Vite build.
 
-## Deployment and troubleshooting
+## Manual browser checklist
 
-GitHub Pages can host the built frontend, but it cannot run this Express API. Deploy `server/index.js` to a Node-capable host and configure the frontend to reach that API over HTTPS. For production, replace the local JSON file with a managed database and keep backups.
+Browser automation is not configured in this repository. Before release, manually test in Chrome or Edge at desktop widths 1366x768 and 1920x1080, and mobile widths 375px and 390px:
 
-- **Apps Script URL/secret missing:** use `STORAGE_PROVIDER=local` until both backend values are set.
-- **Drive folder unavailable:** confirm the Script Properties folder ID and that the deploying Google account owns/can edit the folder.
-- **Apps Script error or timeout:** uploads return a clear error and do not create a CMS record; retry after fixing the web-app deployment.
-- **Gemini error:** the stored media remains available for manual review.
-- **Unauthorized admin:** verify the backend environment values, not Apps Script properties.
-
-No achievements, competition results, scores, technical specifications, or other unverified claims are seeded. Add verified content through the CMS.
+- Home, navigation, hero, gallery, footer, and external links
+- `/admin` direct navigation and refresh
+- Login success, invalid login, logout, and protected API behavior
+- CMS create, edit, delete confirmation, empty states, and network errors
+- Image/video upload, validation error, progress state, preview, publish, and delete
+- Keyboard navigation, visible focus, form labels, dialog close behavior, and readable contrast

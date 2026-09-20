@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import crypto from 'node:crypto'
-const uploadDir = path.resolve('server/uploads')
+const uploadDir = path.resolve(process.env.UPLOAD_DIR || 'server/uploads')
 const safeName = (name) => crypto.randomUUID() + path.extname(name || '').toLowerCase()
 export const localStorageProvider = {
   name: 'local',
