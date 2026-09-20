@@ -7,3 +7,5 @@ server/data/
 server/uploads/
 *.log
 *.tsbuildinfo
+.wrangler/
+.dev.vars*

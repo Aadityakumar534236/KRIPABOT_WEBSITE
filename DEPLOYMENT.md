@@ -2,13 +2,13 @@
 
 ## Architecture
 
-- Frontend: GitHub repository deployed to Cloudflare Pages
+- Frontend: GitHub repository deployed to Cloudflare Workers Builds as a static-assets Worker
 - Backend: the same repository deployed to a Node-compatible HTTPS host with `npm run server`
 - API configuration: `VITE_API_BASE_URL` is set only in the frontend build environment and contains a public API URL, never a secret
 - CMS data: `DATA_DIR` on persistent disk while JSON storage remains in use
 - Media: durable object/file storage for production; Apps Script only for small media
 
-Cloudflare Pages does not run the current Express server, Multer upload path, or local filesystem CMS. The existing `public/_redirects` file maps SPA routes to `/index.html` so direct navigation to `/admin` works on Pages.
+Cloudflare Workers serves the Vite frontend from `dist` using `wrangler.jsonc`. Its `assets.not_found_handling` setting serves `index.html` for SPA routes such as `/admin`. The current Express server, Multer upload path, and local filesystem CMS remain outside Workers.
 
 ## JSON storage
 
@@ -58,7 +58,7 @@ npm run server
 ## Release sequence
 
 1. Push final code to GitHub.
-2. Deploy the frontend to Cloudflare Pages using `npm run build` and `dist`.
+2. Deploy the frontend through Cloudflare Workers Builds using `npm run build`, output directory `dist`, and `npx wrangler deploy`.
 3. Deploy the API to a Node-compatible host using `npm run server`.
 4. Configure production environment variables and secrets.
 5. Configure durable media storage.

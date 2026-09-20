@@ -33,20 +33,20 @@ The current JSON CMS is intentionally small and suitable for a student project. 
 
 Run `npm run build` to create the Vite production bundle in `dist`. `npm run preview` serves that bundle locally.
 
-Cloudflare Pages can host the static Vite frontend with:
+Cloudflare Workers Builds can host the static Vite frontend with:
 
 - Build command: `npm run build`
 - Output directory: `dist`
 
-The `_redirects` file preserves SPA routes such as `/admin` on Pages. The Express API cannot run unchanged on Cloudflare Pages because it uses a long-running Node server, local filesystem storage, and Multer memory uploads. Deploy the API to a Node-compatible host, configure the frontend/API origin as needed, and use durable object storage for production media. A future Workers migration would require replacing Express, local files, and the JSON database with Workers-compatible services.
+The `_redirects` file is retained as a static routing rule, while `wrangler.jsonc` sets Workers' `single-page-application` fallback for routes such as `/admin`. The Express API cannot run unchanged on Cloudflare Workers because it uses a long-running Node server, local filesystem storage, and Multer memory uploads. Deploy the API to a Node-compatible host, configure the frontend/API origin as needed, and use durable object storage for production media. A future Workers API migration would require replacing Express, local files, and the JSON database with Workers-compatible services.
 
 ### Production deployment
 
-Frontend: connect this GitHub repository to Cloudflare Pages with build command `npm run build` and output directory `dist`. Pages serves the Vite frontend only; it does not automatically host this Express API.
+Frontend: connect this GitHub repository to Cloudflare Workers Builds with build command `npm run build`, output directory `dist`, and deploy command `npx wrangler deploy`. The root `wrangler.jsonc` configures `dist` as Workers Static Assets and enables SPA fallback. Cloudflare Workers serves the Vite frontend only; it does not automatically host this Express API.
 
 Backend: deploy the repository to a Node-compatible host with HTTPS, environment variables, enough memory for the configured upload limit, a suitable request timeout, and reliable process startup. The production start command is `npm run server`, which runs `node server/index.js`.
 
-API: set `VITE_API_BASE_URL` in the Cloudflare Pages build environment to the public HTTPS API origin. Set `FRONTEND_ORIGIN` on the API to the exact frontend origin. `VITE_*` values are public and must never contain secrets.
+API: set `VITE_API_BASE_URL` in the Cloudflare Workers build environment to the public HTTPS API origin. Set `FRONTEND_ORIGIN` on the API to the exact frontend origin. `VITE_*` values are public and must never contain secrets.
 
 CMS data: JSON storage is acceptable only when the backend host provides persistent disk and regular backups. Set `DATA_DIR` to that persistent location. It remains single-instance oriented and uses read-modify-write operations, so move to a managed database before adding multiple administrators or scaling horizontally.
 
