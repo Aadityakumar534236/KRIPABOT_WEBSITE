@@ -114,6 +114,22 @@ function App() {
       </section>
 
       <div className="ticks"></div>
+      <section id="mentors" aria-labelledby="mentors-title">
+        <p className="section-kicker">The people who guide us</p>
+        <h2 id="mentors-title">Mentors</h2>
+        <div className="mentor-list">
+          <article className="mentor-card">
+            <span className="mentor-number">01</span>
+            <h3>Om Dolas</h3>
+          </article>
+          <article className="mentor-card">
+            <span className="mentor-number">02</span>
+            <h3>Abhishek Mujumale</h3>
+          </article>
+        </div>
+      </section>
+
+      <div className="ticks"></div>
       <section id="spacer"></section>
     </>
   )

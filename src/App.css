@@ -161,6 +161,66 @@
   }
 }
 
+#mentors {
+  padding: 56px 32px;
+  text-align: center;
+
+  .section-kicker {
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  h2 {
+    font-size: 36px;
+    margin-bottom: 28px;
+  }
+
+  @media (max-width: 1024px) {
+    padding: 40px 20px;
+
+    h2 {
+      font-size: 28px;
+    }
+  }
+}
+
+.mentor-list {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 auto;
+  max-width: 680px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mentor-card {
+  background: var(--social-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  text-align: left;
+
+  h3 {
+    color: var(--text-h);
+    font-size: 22px;
+    font-weight: 500;
+    margin: 8px 0 0;
+  }
+}
+
+.mentor-number {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
 .ticks {
   position: relative;
   width: 100%;
